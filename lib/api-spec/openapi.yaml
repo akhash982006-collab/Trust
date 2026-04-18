@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TrustLayer API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: analyze
+    description: AI text analysis operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /analyze:
+    post:
+      operationId: analyzeText
+      tags: [analyze]
+      summary: Analyze text for trustworthiness
+      description: Analyzes input text across 5 dimensions - factual accuracy, bias, manipulation, source diversity, and logic soundness
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeRequest"
+      responses:
+        "200":
+          description: Analysis complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzeResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Analysis failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +74,102 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    AnalyzeRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 20
+          maxLength: 3000
+      required:
+        - text
+
+    SentenceResult:
+      type: object
+      properties:
+        text:
+          type: string
+        score:
+          type: number
+        flags:
+          type: array
+          items:
+            type: string
+        tooltip:
+          type: string
+      required:
+        - text
+        - score
+        - flags
+        - tooltip
+
+    ModuleResult:
+      type: object
+      properties:
+        score:
+          type: number
+        details:
+          type: string
+      required:
+        - score
+        - details
+
+    AnalysisModules:
+      type: object
+      properties:
+        factAccuracy:
+          $ref: "#/components/schemas/ModuleResult"
+        biasLevel:
+          $ref: "#/components/schemas/ModuleResult"
+        manipulationRisk:
+          $ref: "#/components/schemas/ModuleResult"
+        sourceDiversity:
+          $ref: "#/components/schemas/ModuleResult"
+        logicSoundness:
+          $ref: "#/components/schemas/ModuleResult"
+      required:
+        - factAccuracy
+        - biasLevel
+        - manipulationRisk
+        - sourceDiversity
+        - logicSoundness
+
+    AnalyzeResponse:
+      type: object
+      properties:
+        overallTrustScore:
+          type: number
+        label:
+          type: string
+        color:
+          type: string
+        sentences:
+          type: array
+          items:
+            $ref: "#/components/schemas/SentenceResult"
+        modules:
+          $ref: "#/components/schemas/AnalysisModules"
+        flagsFound:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+      required:
+        - overallTrustScore
+        - label
+        - color
+        - sentences
+        - modules
+        - flagsFound
+        - recommendations
